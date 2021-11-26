@@ -28,16 +28,12 @@ const Home: NextPage = () => {
             <span>選択してください</span>
           </p>
         )}
-        {LANGUAGES.map((language, i) => (
-          <div key={i}>
-            <Input
-              type="radio"
-              value={language}
-              {...register("language", { required: true })}
-            />
-            <label>{language}</label>
-          </div>
-        ))}
+        <Input
+          type="radio"
+          value="TypeScript"
+          {...register("language", { required: true })}
+        />
+        <label>TypeScript</label>
         <button
           type="submit"
           className="text-white bg-blue-600 py-2 px-4 rounded-md"
