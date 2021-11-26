@@ -1,8 +1,5 @@
-/* eslint-disable react/display-name */
-// TODO:react/display-nameについて調べる
-import React, { useEffect } from "react";
+import React, { FocusEventHandler } from "react";
 import { useForm, UseFormReturn, SubmitHandler } from "react-hook-form";
-import { useMergeRefs } from "../hooks/useMergeRefs";
 
 type InputProps = React.DetailedHTMLProps<
   React.InputHTMLAttributes<HTMLInputElement>,
@@ -11,41 +8,41 @@ type InputProps = React.DetailedHTMLProps<
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   (props, ref) => {
-    const internalRef = React.useRef<HTMLInputElement>();
-
-    // バリデーションエラー発生時にiOSでradio/checkboxのinputにスクロールしない問題のワークアラウンド
-    useEffect(() => {
+    const onFocus: FocusEventHandler<HTMLInputElement> = (event) => {
+      // バリデーションエラー発生時にradio/checkboxのinputにしっかりスクロールしない問題のワークアラウンド
+      // 【問題詳細】
+      // Safari on iOS: 全くスクロールしない, FireFox,IE：スクロールが不十分でエラーメッセージが見えない,
       if (props.type !== "radio" && props.type !== "checkbox") {
         return;
       }
-      if (!/iPad|iPhone/.test(navigator.userAgent)) {
-        return;
+
+      try {
+        const element = event.currentTarget;
+        // radio/checkboxをタップしたときはスクロールしない
+        if (isInviewAll(element)) return;
+
+        // バリデーションエラー発生時のみスクロールする
+        // 注意：本対応はIE対応できていない(scrollIntoViewはIE非対応)
+        element.scrollIntoView({
+          block: "center",
+          behavior: "auto",
+        });
+      } catch (e) {
+        console.error(e);
       }
+    };
 
-      internalRef.current?.addEventListener("focus", (e) => {
-        try {
-          const element = e.target as HTMLInputElement;
-          const rect = element.getBoundingClientRect();
-          const isInView = 0 < rect.bottom && rect.top < window.innerHeight;
-          // radio/checkboxをタップしたときはスクロールしない
-          if (isInView) return;
-
-          // バリデーションエラー発生時のみスクロールする
-          element.scrollIntoView({
-            block: "center",
-            behavior: "smooth",
-          });
-        } catch (e) {
-          console.error(
-            "バリデーションエラー発生時にiOSでradio/checkboxのinputにスクロールさせるのに失敗",
-            e
-          );
-        }
-      });
-    }, []);
-    return <input ref={useMergeRefs(internalRef, ref)} {...props} />;
+    return <input ref={ref} onFocus={onFocus} {...props} />;
   }
 );
+Input.displayName = "Input";
+
+const isInviewAll = (element: HTMLInputElement) => {
+  const rect = element.getBoundingClientRect();
+
+  // 1 < rect.top は firefox対応
+  return 1 < rect.top && rect.bottom < window.innerHeight;
+};
 
 type Option = {
   label: React.ReactNode;
@@ -68,6 +65,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     </select>
   )
 );
+Select.displayName = "Select";
 
 type FormProps<TFormValues> = {
   onSubmit: SubmitHandler<TFormValues>;
@@ -84,10 +82,4 @@ export const Form = <
   return (
     <form onSubmit={methods.handleSubmit(onSubmit)}>{children(methods)}</form>
   );
-};
-
-type FormValues = {
-  firstName: string;
-  lastName: string;
-  sex: string;
 };
